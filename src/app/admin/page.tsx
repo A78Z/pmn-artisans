@@ -17,8 +17,8 @@ export default function AdminDashboard() {
     // Password Reset State
     const [resetUser, setResetUser] = useState<any | null>(null);
 
-    // Super Admin Check
-    const isSuperAdmin = session?.user?.email === 'syllaharouna740@gmail.com';
+    // Super Admin Check - Relaxed to check role OR specific email
+    const isSuperAdmin = session?.user?.email === 'syllaharouna740@gmail.com' || (session?.user as any)?.role === 'super_admin' || (session?.user as any)?.role === 'admin';
 
     // Load Stats
     useEffect(() => {

@@ -43,15 +43,17 @@ export const ensureParseInitialized = async () => {
     Parse.initialize(appId, jsKey, masterKey);
     Parse.serverURL = serverUrl;
     globalForParse.parseInitialized = true;
+    console.log(`[Parse] Initialized. MasterKey provided: ${!!masterKey}`);
 };
 
-// Auto-init on module load if possible, but safely
+// Auto-init on module load
 if (!globalForParse.parseInitialized) {
     if (appId && jsKey && serverUrl) {
         // @ts-ignore
         Parse.initialize(appId, jsKey, masterKey);
         Parse.serverURL = serverUrl;
         globalForParse.parseInitialized = true;
+        console.log(`[Parse] Auto-Initialized. MasterKey provided: ${!!masterKey}`);
     }
 }
 
