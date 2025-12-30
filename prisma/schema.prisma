@@ -1,0 +1,28 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Artisan {
+  id          String   @id @default(uuid())
+  region      String
+  departement String
+  commune     String
+  quartier    String
+  filiere     String
+  metier      String
+  nom         String
+  prenom      String
+  telephone   String
+  createdAt   DateTime @default(now())
+
+  @@index([region])
+  @@index([departement])
+  @@index([filiere])
+  @@index([metier])
+  @@map("artisans")
+}
