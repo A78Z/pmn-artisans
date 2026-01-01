@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "PMN DATAHUB Sénégal",
-  description: "Plateforme sécurisée de consultation des données des Chambres de Métiers du Sénégal",
+  title: "PMN DATAHUB ARTISANS",
+  description: "Plateforme sécurisée de consultation des données des artisans du Sénégal",
 };
 
 import { Providers } from "./providers";
