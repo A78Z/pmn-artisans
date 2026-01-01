@@ -59,8 +59,10 @@ export const authConfig = {
 
             return true;
         },
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
+            // Initial sign in
             if (user) {
+                console.log("[JWT] Initial sign in for user:", user.id);
                 token.role = user.role;
                 token.status = user.status;
                 token.nom = (user as any).nom;
@@ -68,10 +70,17 @@ export const authConfig = {
                 token.chambre = (user as any).chambre;
                 token.fonction = (user as any).fonction;
             }
+
+            // Update session trigger
+            if (trigger === "update" && session) {
+                console.log("[JWT] Session update triggered");
+                return { ...token, ...session.user };
+            }
+
             return token;
         },
         async session({ session, token }) {
-            if (session.user) {
+            if (session.user && token) {
                 session.user.role = token.role as string;
                 session.user.status = token.status as string;
                 (session.user as any).nom = token.nom;

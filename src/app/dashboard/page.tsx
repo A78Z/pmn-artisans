@@ -9,8 +9,16 @@ import Pagination from '@/app/ui/Pagination';
 import { getFilterOptions } from '@/app/lib/actions';
 
 function DashboardContent() {
-    const { data: session } = useSession();
+    const { data: session, update } = useSession();
     const searchParams = useSearchParams();
+
+    // Force session update if user data is incomplete (fixes header display issue)
+    useEffect(() => {
+        if (session?.user && !(session.user as any).nom) {
+            console.log("Session incomplete, forcing update...");
+            update();
+        }
+    }, [session, update]);
     // ...
 
     const router = useRouter();
