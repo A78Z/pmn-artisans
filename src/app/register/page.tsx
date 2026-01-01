@@ -230,7 +230,7 @@ export default function RegisterPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
                                 <div>
                                     <label className="label">Email *</label>
-                                    <input type="email" name="email" required className="input" placeholder="contact.chambremetiers@..."
+                                    <input type="email" name="email" required className="input" placeholder="artisan@gmail..."
                                         style={{ width: '100%', padding: '0.5rem', borderRadius: '0.4rem', border: '1px solid hsl(var(--input))' }} />
                                 </div>
                                 <div>

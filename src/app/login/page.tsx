@@ -55,7 +55,7 @@ export default function LoginPage() {
                             name="username"
                             type="email"
                             required
-                            placeholder="exemple@gmail.com"
+                            placeholder="artisan@gmail.com"
                             style={{
                                 width: '100%',
                                 padding: '0.75rem',
@@ -75,6 +75,7 @@ export default function LoginPage() {
                                 name="password"
                                 type={showPassword ? "text" : "password"}
                                 required
+                                placeholder="mot de passe"
                                 style={{
                                     width: '100%',
                                     padding: '0.75rem',
@@ -126,7 +127,7 @@ export default function LoginPage() {
 
                     <div style={{ textAlign: 'center', marginTop: '1rem' }}>
                         <Link href="/register" style={{ fontSize: '0.85rem', color: 'hsl(var(--primary))', textDecoration: 'none' }}>
-                            Créer un compte agent
+                            Créer un compte
                         </Link>
                     </div>
                 </form>
