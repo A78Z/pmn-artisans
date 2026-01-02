@@ -55,18 +55,30 @@ function DashboardContent() {
     useEffect(() => {
         if (status === 'loading') return;
 
-        const fetchOptions = async () => {
-            const res = await getFilterOptions({
-                region: filters.region,
-                departement: filters.departement,
-                commune: filters.commune,
-                filiere: filters.filiere
-            });
-            if (res.success && res.data) {
-                setFilterOptions(res.data);
+        const fetchOptionsWithRetry = async (retries = 3, delay = 1000) => {
+            try {
+                const res = await getFilterOptions({
+                    region: filters.region,
+                    departement: filters.departement,
+                    commune: filters.commune,
+                    filiere: filters.filiere
+                });
+
+                if (res.success && res.data) {
+                    setFilterOptions(res.data);
+                } else {
+                    if (retries > 0) throw new Error(res.error || "Failed to fetch options");
+                }
+            } catch (error) {
+                if (retries > 0) {
+                    await new Promise(r => setTimeout(r, delay));
+                    return fetchOptionsWithRetry(retries - 1, delay);
+                }
+                console.error("Failed to load filter options after retries", error);
             }
         };
-        fetchOptions();
+
+        fetchOptionsWithRetry();
     }, [filters.region, filters.departement, filters.commune, filters.quartier, filters.filiere, filters.metier, status]);
 
     const fetchData = useCallback(async () => {
