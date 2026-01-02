@@ -150,8 +150,8 @@ function DashboardContent() {
                     .show-on-mobile { display: flex !important; }
                     
                     /* Layout Adjustments */
-                    .dashboard-header { padding: 0 1.25rem !important; height: 70px !important; }
-                    .dashboard-main { padding: 1.25rem 1rem !important; }
+                    .dashboard-header { padding: 0 1rem !important; height: auto !important; min-height: 70px !important; flex-wrap: wrap !important; }
+                    .dashboard-main { padding: 1rem 0.5rem !important; }
                     
                     /* Sidebar Styling */
                     .sidebar-container {
@@ -176,51 +176,64 @@ function DashboardContent() {
                         justify-content: center !important;
                         text-align: center !important;
                         width: 100% !important;
-                        padding: 3rem !important;
-                        border: none !important;
-                        box-shadow: none !important;
+                        padding: 3rem 1rem !important; 
                     }
                     
-                    /* Hide Table Head on Mobile */
+                    /* TABLE TO CARD TRANSFORMATION (Robust Block Method) */
+                    table { 
+                        display: block !important; 
+                        width: 100% !important; 
+                        min-width: 0 !important; 
+                        border-spacing: 0 !important;
+                    }
                     thead { display: none !important; }
+                    tbody { display: block !important; width: 100% !important; }
                     
                     tbody tr {
-                        display: flex !important;
-                        flex-direction: column !important;
+                        display: block !important;
                         background: white !important;
-                        margin-bottom: 1rem !important;
+                        margin-bottom: 1.25rem !important;
                         border-radius: 1rem !important;
-                        box-shadow: 0 4px 10px rgba(0,0,0,0.06) !important;
-                        padding: 1.25rem !important;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+                        padding: 1.25rem 1rem !important;
                         border: 1px solid rgba(0,0,0,0.05) !important;
                         position: relative;
+                        width: 100% !important;
+                        box-sizing: border-box !important;
                     }
 
                     tbody td {
                         display: flex !important;
                         justify-content: space-between !important;
                         align-items: center !important;
-                        padding: 0.5rem 0 !important;
+                        padding: 0.75rem 0 !important;
                         border: none !important;
-                        border-bottom: 1px solid rgba(0,0,0,0.03) !important;
+                        border-bottom: 1px solid rgba(0,0,0,0.05) !important;
                         text-align: right !important;
                         width: 100% !important;
+                        box-sizing: border-box !important;
+                        font-size: 0.95rem !important;
                     }
                     
                     tbody td:last-child {
                         border-bottom: none !important;
                         padding-top: 1rem !important;
-                        margin-top: 0.5rem !important;
-                        justify-content: center !important;
                     }
 
-                    /* Add Labels via pseudo-elements for clarity/logic if needed, 
-                       but strictly following current structure, we rely on context.
-                       However, enforcing alignment is key.
-                    */
+                    /* Mobile Labels styling */
+                    .mobile-label {
+                        font-size: 0.75rem;
+                        color: hsl(var(--muted-foreground));
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                        font-weight: 600;
+                        margin-right: 1rem;
+                        white-space: nowrap;
+                    }
                 }
                 @media (min-width: 1025px) {
                     .show-on-mobile { display: none !important; }
+                    .mobile-label { display: none !important; }
                     .sidebar-container {
                         width: 340px;
                         position: relative;
@@ -459,8 +472,8 @@ function DashboardContent() {
                             {loading && <Loader2 className="animate-spin text-primary" />}
                         </div>
 
-                        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-                            <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'separate', borderSpacing: '0 0.75rem', fontSize: '0.95rem' }}>
+                        <div style={{ overflowX: 'visible' }}>
+                            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 0.75rem', fontSize: '0.95rem' }}>
                                 <thead>
                                     <tr style={{ textAlign: 'left', color: 'hsl(var(--muted-foreground))', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: '600' }}>
                                         <th style={{ padding: '0.75rem 1.5rem' }}>Prénom & Nom</th>
@@ -491,18 +504,15 @@ function DashboardContent() {
                                             }}
                                         >
                                             <td style={{ padding: '1.25rem 1.5rem', fontWeight: '600', borderTopLeftRadius: 'var(--radius)', borderBottomLeftRadius: 'var(--radius)', color: 'hsl(var(--foreground))' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '0.2rem', textAlign: 'left' }}>
-                                                    <span style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: '0.05em' }} className="show-on-mobile">Artisan</span>
-                                                    <span style={{ fontSize: '1.1rem' }}>{artisan.prenom} {artisan.nom}</span>
-                                                </div>
+                                                <span className="mobile-label">Artisan</span>
+                                                <span style={{ fontSize: '1.1rem' }}>{artisan.prenom} {artisan.nom}</span>
                                             </td>
                                             <td style={{ padding: '1.25rem 1rem', color: 'hsl(var(--muted-foreground))', fontWeight: '500' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem', textAlign: 'right', width: '100%' }}>
-                                                    <span style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: '0.05em' }} className="show-on-mobile">Métier</span>
-                                                    <span>{artisan.metier}</span>
-                                                </div>
+                                                <span className="mobile-label">Métier</span>
+                                                <span>{artisan.metier}</span>
                                             </td>
                                             <td style={{ padding: '1.25rem 1rem' }}>
+                                                <span className="mobile-label">Filière</span>
                                                 <span style={{
                                                     padding: '0.35rem 0.9rem',
                                                     borderRadius: '2rem',
@@ -519,43 +529,41 @@ function DashboardContent() {
                                                 </span>
                                             </td>
                                             <td style={{ padding: '1.25rem 1rem' }}>
-                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.2rem', textAlign: 'right', width: '100%' }}>
-                                                    <span style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: '0.05em' }} className="show-on-mobile">Localisation</span>
+                                                <span className="mobile-label">Localisation</span>
+                                                <div style={{ textAlign: 'right' }}>
                                                     <div style={{ fontWeight: '600', color: 'hsl(var(--foreground))' }}>{artisan.commune}, {artisan.quartier}</div>
                                                     <div style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem', justifyContent: 'flex-end' }}>
-                                                        <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'hsl(var(--muted-foreground))' }}></span>
+                                                        <span className="hide-on-mobile" style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'hsl(var(--muted-foreground))' }}></span>
                                                         {artisan.departement}, {artisan.region}
                                                     </div>
                                                 </div>
                                             </td>
                                             <td style={{ padding: '1.25rem 1.5rem', borderTopRightRadius: 'var(--radius)', borderBottomRightRadius: 'var(--radius)', color: 'hsl(var(--primary))' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
-                                                    <span style={{ fontSize: '0.8rem', color: 'hsl(var(--muted-foreground))', textTransform: 'uppercase', letterSpacing: '0.05em' }} className="show-on-mobile">Contact</span>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                        <span style={{ fontFamily: 'monaco, consolas, monospace', fontSize: '1.1rem', fontWeight: '600' }}>
-                                                            {artisan.telephone}
-                                                        </span>
-                                                        {artisan.telephone && (
-                                                            <a
-                                                                href={`tel:${artisan.telephone.replace(/\s/g, '')}`}
-                                                                style={{
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    width: '42px',
-                                                                    height: '42px',
-                                                                    borderRadius: '50%',
-                                                                    backgroundColor: 'hsl(var(--primary))',
-                                                                    color: '#fff',
-                                                                    transition: 'all 0.2s',
-                                                                    boxShadow: '0 4px 12px rgba(31, 122, 76, 0.3)'
-                                                                }}
-                                                                title="Appeler"
-                                                            >
-                                                                <Phone size={20} />
-                                                            </a>
-                                                        )}
-                                                    </div>
+                                                <span className="mobile-label">Contact</span>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                    <span style={{ fontFamily: 'monaco, consolas, monospace', fontSize: '1.1rem', fontWeight: '600' }}>
+                                                        {artisan.telephone}
+                                                    </span>
+                                                    {artisan.telephone && (
+                                                        <a
+                                                            href={`tel:${artisan.telephone.replace(/\s/g, '')}`}
+                                                            style={{
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                width: '42px',
+                                                                height: '42px',
+                                                                borderRadius: '50%',
+                                                                backgroundColor: 'hsl(var(--primary))',
+                                                                color: '#fff',
+                                                                transition: 'all 0.2s',
+                                                                boxShadow: '0 4px 12px rgba(31, 122, 76, 0.3)'
+                                                            }}
+                                                            title="Appeler"
+                                                        >
+                                                            <Phone size={20} />
+                                                        </a>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
