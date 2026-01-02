@@ -125,9 +125,14 @@ function DashboardContent() {
         const newFilters = { ...filters, page: newPage };
         setFilters(newFilters);
         updateUrl(newFilters);
-        // Scroll to top of results
-        const resultTop = document.querySelector('.highlight-zone');
-        if (resultTop) resultTop.scrollIntoView({ behavior: 'smooth' });
+
+        // Robust Scroll to Top
+        const mainContainer = document.getElementById('main-scroll-container');
+        if (mainContainer) {
+            mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        // Fallback for mobile if body scrolls
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleLimitChange = (newLimit: number) => {
@@ -428,7 +433,7 @@ function DashboardContent() {
                 </aside>
 
                 {/* MAIN CONTENT */}
-                <main className="dashboard-main" style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto', backgroundColor: 'transparent' }}>
+                <main id="main-scroll-container" className="dashboard-main" style={{ flex: 1, padding: '2rem 3rem', overflowY: 'auto', backgroundColor: 'transparent' }}>
 
                     {/* TOP SEARCH - Floating */}
                     <div style={{ marginBottom: '2.5rem', display: 'flex', gap: '1rem', justifyContent: 'center' }}>
