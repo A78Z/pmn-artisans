@@ -59,7 +59,12 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
     useEffect(() => {
         if (isFirstRun.current) {
             isFirstRun.current = false;
-            // If the initial tab isn't validation, we might want to fetch, but we default to validation.
+            // AUTO-RECOVERY: If server returned empty data (potential cold start/timing issue),
+            // we force a client-side fetch immediately.
+            if (initialUsers.length === 0) {
+                console.log("Initial data empty - triggering auto-recovery fetch");
+                loadData();
+            }
             return;
         }
         loadData();
@@ -71,6 +76,10 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
             const res = await getAdminStats();
             if (res.success && res.data) setStats(res.data);
         };
+        // Auto-refresh stats if they look broken (all zeros)
+        if (stats.totalUsers === 0 && stats.pendingValidation === 0) {
+            loadStats();
+        }
         const interval = setInterval(loadStats, 60000);
         return () => clearInterval(interval);
     }, []);
@@ -96,7 +105,7 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
             }
         } catch (e: any) {
             console.error(e);
-            setError("Impossible de charger les données.");
+            setError(e.message || "Impossible de charger les données.");
         } finally {
             setLoading(false);
         }

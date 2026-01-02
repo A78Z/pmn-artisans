@@ -9,11 +9,11 @@ if (!appId || !jsKey || !serverUrl) {
     console.warn('Back4App credentials missing in environment variables');
 }
 
-// Basic storage mock for Node.js
+// Basic storage mock for Node.js - STRICTLY NO-OP to prevent session pollution
 if (typeof window === 'undefined') {
     const MockStorage = {
         getItem: () => null,
-        setItem: () => { },
+        setItem: (_key: string, _value: any) => { }, // Do not store anything
         removeItem: () => { },
         clear: () => { }
     };
