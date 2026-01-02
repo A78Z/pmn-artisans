@@ -17,17 +17,41 @@ export default function AdminDashboard() {
     // Password Reset State
     const [resetUser, setResetUser] = useState<any | null>(null);
 
+    const [error, setError] = useState<string | null>(null);
+
     // Super Admin Check - Relaxed to check role OR specific email
     const isSuperAdmin = session?.user?.email === 'syllaharouna740@gmail.com' || (session?.user as any)?.role === 'super_admin' || (session?.user as any)?.role === 'admin';
+
+    // Helper: Retry Wrapper
+    const fetchWithRetry = async (fn: () => Promise<any>, retries = 3, delay = 1000): Promise<any> => {
+        try {
+            const res = await fn();
+            // If the function returns a specific success: false, treat as error to retry
+            if (res && res.success === false) throw new Error(res.error || "Operation failed");
+            return res;
+        } catch (err: any) {
+            if (retries > 0) {
+                console.log(`Retrying... attempts left: ${retries}`);
+                await new Promise(res => setTimeout(res, delay));
+                return fetchWithRetry(fn, retries - 1, delay);
+            } else {
+                throw err;
+            }
+        }
+    };
 
     // Load Stats
     useEffect(() => {
         if (status === 'loading') return;
 
         const loadStats = async () => {
-            const res = await getAdminStats();
-            if (res.success && res.data) {
-                setStats(res.data);
+            try {
+                const res = await fetchWithRetry(() => getAdminStats());
+                if (res.success && res.data) {
+                    setStats(res.data);
+                }
+            } catch (e) {
+                console.error("Failed to load stats after retries", e);
             }
         };
         loadStats();
@@ -43,28 +67,26 @@ export default function AdminDashboard() {
 
     const loadData = async () => {
         setLoading(true);
+        setError(null);
         try {
+            let res;
             if (activeTab === 'admins') {
-                const res = await getAdmins();
-                if (res.success && res.data) {
-                    setData(res.data);
-                } else {
-                    console.error(res.error);
-                }
+                res = await fetchWithRetry(() => getAdmins());
             } else {
                 let filter: 'pending' | 'all' | 'online' = 'all';
                 if (activeTab === 'validation') filter = 'pending';
                 if (activeTab === 'online') filter = 'online';
-
-                const res = await getUsers(filter);
-                if (res.success && res.data) {
-                    setData(res.data);
-                } else {
-                    console.error(res.error);
-                }
+                res = await fetchWithRetry(() => getUsers(filter));
             }
-        } catch (e) {
+
+            if (res.success && res.data) {
+                setData(res.data);
+            } else {
+                setError(res.error || "Erreur de chargement");
+            }
+        } catch (e: any) {
             console.error(e);
+            setError("Impossible de charger les données. Veuillez vérifier votre connexion.");
         } finally {
             setLoading(false);
         }
@@ -149,6 +171,21 @@ export default function AdminDashboard() {
                     </p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
+                    {/* Manual Refresh Button */}
+                    <button
+                        onClick={() => loadData()}
+                        title="Actualiser les données"
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            backgroundColor: 'white', border: '1px solid hsl(var(--border))',
+                            color: 'hsl(var(--muted-foreground))',
+                            width: '40px', borderRadius: '1rem', cursor: 'pointer',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                        }}
+                    >
+                        <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+                    </button>
+
                     <div style={{
                         backgroundColor: 'white', padding: '1rem', borderRadius: '1rem',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
@@ -229,6 +266,13 @@ export default function AdminDashboard() {
 
             {/* CONTENT CARD */}
             <div style={{ backgroundColor: 'white', borderRadius: '1rem', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid hsl(var(--border))', padding: '2rem', minHeight: '400px' }}>
+                {error && (
+                    <div style={{ backgroundColor: '#fee2e2', color: '#dc2626', padding: '1rem', borderRadius: '0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
+                        <Shield size={18} />
+                        <strong>Erreur :</strong> {error}
+                        <button onClick={() => loadData()} style={{ marginLeft: 'auto', background: 'white', border: '1px solid #fecaca', borderRadius: '0.5rem', padding: '0.25rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '600', color: '#dc2626' }}>Réessayer</button>
+                    </div>
+                )}
                 {loading ? (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
                         <Loader2 className="animate-spin" size={32} style={{ color: 'hsl(var(--primary))' }} />
