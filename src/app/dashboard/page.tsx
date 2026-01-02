@@ -144,7 +144,7 @@ function DashboardContent() {
                     throw new Error(`Fetch failed: ${res.status}`);
                 }
                 return res;
-            } catch (err) {
+            } catch (err: any) {
                 if (retries > 0) {
                     await new Promise(r => setTimeout(r, delay));
                     return fetchWithRetry(url, retries - 1, delay);
@@ -159,12 +159,13 @@ function DashboardContent() {
             if (res.status === 401) {
                 // Session expired or invalid
                 console.log("Unauthorized, signing out...");
-                signOut({ callbackUrl: '/login' });
+                await signOut({ callbackUrl: '/login' });
                 return;
             }
 
             if (!res.ok) {
-                throw new Error("Erreur de chargement");
+                const text = await res.text();
+                throw new Error(`Erreur ${res.status}: ${text}`);
             }
 
             const json = await res.json();
@@ -173,8 +174,12 @@ function DashboardContent() {
                 setTotal(json.total);
                 setTotalPages(json.totalPages);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to fetch data", error);
+            // Display error in UI if we want to debug
+            if (typeof window !== 'undefined') {
+                (window as any).__LAST_ERROR = error.message;
+            }
         } finally {
             setLoading(false);
         }
@@ -245,7 +250,7 @@ function DashboardContent() {
     }
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent' }}>
+        <div key={isSessionReady ? 'ready' : 'waiting'} style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent' }}>
             <style dangerouslySetInnerHTML={{
                 __html: `
                 @media (max-width: 1024px) {
@@ -397,6 +402,12 @@ function DashboardContent() {
                         <div className="sync-badge">
                             <Loader2 size={14} className="animate-spin" />
                             <span>Synchronisation...</span>
+                        </div>
+                    )}
+                    {/* Debug Error Display */}
+                    {(window as any).__LAST_ERROR && (
+                        <div style={{ color: 'red', fontSize: '10px', maxWidth: '200px' }}>
+                            {(window as any).__LAST_ERROR}
                         </div>
                     )}
                 </div>
