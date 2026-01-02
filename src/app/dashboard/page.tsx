@@ -9,17 +9,16 @@ import Pagination from '@/app/ui/Pagination';
 import { getFilterOptions } from '@/app/lib/actions';
 
 function DashboardContent() {
-    const { data: session, update } = useSession();
+    const { data: session, update, status } = useSession();
     const searchParams = useSearchParams();
 
     // Force session update if user data is incomplete (fixes header display issue)
     useEffect(() => {
-        if (session?.user && !(session.user as any).nom) {
+        if (status === 'authenticated' && session?.user && !(session.user as any).nom) {
             console.log("Session incomplete, forcing update...");
             update();
         }
-    }, [session, update]);
-    // ...
+    }, [session, update, status]);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -54,6 +53,8 @@ function DashboardContent() {
 
     // Fetch intelligent options when filters change
     useEffect(() => {
+        if (status === 'loading') return;
+
         const fetchOptions = async () => {
             const res = await getFilterOptions({
                 region: filters.region,
@@ -66,7 +67,7 @@ function DashboardContent() {
             }
         };
         fetchOptions();
-    }, [filters.region, filters.departement, filters.commune, filters.quartier, filters.filiere, filters.metier]);
+    }, [filters.region, filters.departement, filters.commune, filters.quartier, filters.filiere, filters.metier, status]);
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -75,11 +76,28 @@ function DashboardContent() {
             if (value) params.append(key, String(value));
         });
 
+        const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
+            try {
+                const res = await fetch(url);
+                if (!res.ok && res.status !== 401 && retries > 0) {
+                    throw new Error(`Fetch failed: ${res.status}`);
+                }
+                return res;
+            } catch (err) {
+                if (retries > 0) {
+                    await new Promise(r => setTimeout(r, delay));
+                    return fetchWithRetry(url, retries - 1, delay);
+                }
+                throw err;
+            }
+        };
+
         try {
-            const res = await fetch(`/api/artisans?${params.toString()}`);
+            const res = await fetchWithRetry(`/api/artisans?${params.toString()}`);
 
             if (res.status === 401) {
                 // Session expired or invalid
+                console.log("Unauthorized, signing out...");
                 signOut({ callbackUrl: '/login' });
                 return;
             }
@@ -96,15 +114,15 @@ function DashboardContent() {
             }
         } catch (error) {
             console.error("Failed to fetch data", error);
-            // Optionally set error state here if UI needs to show it
         } finally {
             setLoading(false);
         }
     }, [filters]);
 
     useEffect(() => {
+        if (status === 'loading') return;
         fetchData();
-    }, [fetchData]);
+    }, [fetchData, status]);
 
     // Scroll to Top when page changes (Robust Mobile Fix)
     useEffect(() => {
