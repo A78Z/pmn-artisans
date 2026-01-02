@@ -128,7 +128,18 @@ function DashboardContent() {
 
         const fetchWithRetry = async (url: string, retries = 3, delay = 1000): Promise<Response> => {
             try {
-                const res = await fetch(url);
+                // Add timestamp and no-cache headers to prevent browser caching issues
+                const cacheBuster = `_t=${Date.now()}`;
+                const separator = url.includes('?') ? '&' : '?';
+                const finalUrl = `${url}${separator}${cacheBuster}`;
+
+                const res = await fetch(finalUrl, {
+                    headers: {
+                        'Cache-Control': 'no-store, no-cache, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
+
                 if (!res.ok && res.status !== 401 && retries > 0) {
                     throw new Error(`Fetch failed: ${res.status}`);
                 }

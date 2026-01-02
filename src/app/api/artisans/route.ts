@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/app/lib/auth";
 import Parse, { ensureParseInitialized } from "@/app/lib/parse";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: NextRequest) {
     // Debug 1: Check Auth
     const session = await auth();
