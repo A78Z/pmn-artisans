@@ -17,33 +17,45 @@ function DashboardContent() {
 
     // Robust Session Barrier Effect
     useEffect(() => {
+        let isValid = true;
+
         const checkSession = async () => {
+            // 1. Loading: Wait
             if (status === 'loading') return;
 
+            // 2. Unauthenticated: Allow render (will likely redirect)
             if (status === 'unauthenticated') {
-                // Let the router handle redirect if needed, or just show empty
-                setIsSessionReady(true);
+                if (isValid) setIsSessionReady(true);
                 return;
             }
 
+            // 3. Authenticated: Strict Data Check
             if (status === 'authenticated') {
-                // Check if we have critical user data
                 const user = session?.user as any;
                 if (user && user.nom && user.prenom) {
-                    setIsSessionReady(true);
+                    // Data Present -> Ready
+                    if (isValid) setIsSessionReady(true);
                 } else {
-                    console.log("Session authenticated but data missing. Retrying...");
-                    await update(); // Force re-fetch from NextAuth
-                    // We don't set isSessionReady to true here; the effect will re-run when session updates
+                    // Data Missing -> Not Ready & Force Update
+                    console.log("[Barrier] Authenticated but data missing. Retrying...");
+                    // Important: Ensure we are NOT ready if data is missing, even if we were before
+                    if (isValid) setIsSessionReady(false);
+                    await update();
                 }
             }
         };
 
-        // If not ready, poll or wait
-        if (!isSessionReady) {
-            const timer = setTimeout(checkSession, 500); // Check every 500ms if stuck
-            return () => clearTimeout(timer);
-        }
+        // Polling if not ready
+        const tick = async () => {
+            await checkSession();
+            if (!isSessionReady && isValid && status !== 'unauthenticated') {
+                setTimeout(tick, 500);
+            }
+        };
+
+        tick();
+
+        return () => { isValid = false; };
     }, [session, status, update, isSessionReady]);
 
     const router = useRouter();
