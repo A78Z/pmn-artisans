@@ -6,7 +6,7 @@ import { Loader2, UserCheck, UserX, User, Activity, RefreshCw, Search, Phone, Ma
 import { useSession, signOut } from 'next-auth/react';
 
 export default function AdminDashboard() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const [stats, setStats] = useState({ totalUsers: 0, pendingValidation: 0, onlineUsers: 0 });
     const [activeTab, setActiveTab] = useState<'validation' | 'users' | 'online' | 'admins'>('validation');
     const [data, setData] = useState<any[]>([]);
@@ -22,6 +22,8 @@ export default function AdminDashboard() {
 
     // Load Stats
     useEffect(() => {
+        if (status === 'loading') return;
+
         const loadStats = async () => {
             const res = await getAdminStats();
             if (res.success && res.data) {
@@ -31,12 +33,13 @@ export default function AdminDashboard() {
         loadStats();
         const interval = setInterval(loadStats, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [status]);
 
     // Load Data
     useEffect(() => {
+        if (status === 'loading') return;
         loadData();
-    }, [activeTab]);
+    }, [activeTab, status]);
 
     const loadData = async () => {
         setLoading(true);
