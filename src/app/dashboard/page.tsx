@@ -77,6 +77,17 @@ function DashboardContent() {
 
         try {
             const res = await fetch(`/api/artisans?${params.toString()}`);
+
+            if (res.status === 401) {
+                // Session expired or invalid
+                signOut({ callbackUrl: '/login' });
+                return;
+            }
+
+            if (!res.ok) {
+                throw new Error("Erreur de chargement");
+            }
+
             const json = await res.json();
             if (json.data) {
                 setData(json.data);
@@ -85,6 +96,7 @@ function DashboardContent() {
             }
         } catch (error) {
             console.error("Failed to fetch data", error);
+            // Optionally set error state here if UI needs to show it
         } finally {
             setLoading(false);
         }
@@ -158,7 +170,18 @@ function DashboardContent() {
                         transform: translateX(0);
                     }
 
-                    /* TABLE TO CARD TRANSFORMATION */
+                    /* No Results Fix */
+                    .no-results-cell {
+                        display: flex !important;
+                        justify-content: center !important;
+                        text-align: center !important;
+                        width: 100% !important;
+                        padding: 3rem !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                    }
+                    
+                    /* Hide Table Head on Mobile */
                     thead { display: none !important; }
                     
                     tbody tr {
@@ -539,7 +562,7 @@ function DashboardContent() {
                                     ))}
                                     {!loading && data.length === 0 && (
                                         <tr>
-                                            <td colSpan={5} style={{ padding: '4rem', textAlign: 'center', color: 'hsl(var(--muted-foreground))' }}>
+                                            <td colSpan={5} className="no-results-cell" style={{ padding: '4rem', textAlign: 'center', color: 'hsl(var(--muted-foreground))' }}>
                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
                                                     <Search size={48} style={{ opacity: 0.2 }} />
                                                     <p>Aucun artisan trouvé avec ces critères.</p>
