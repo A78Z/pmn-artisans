@@ -45,13 +45,16 @@ export async function getAdminDashboardData() {
             createdAt: u.get("createdAt") ? u.get("createdAt").toISOString() : null
         }));
 
-        return {
+        // CRITICAL: Ensure robust serialization to prevent "An unexpected response" error
+        // mimicking a Cloud Function response.
+        return JSON.parse(JSON.stringify({
             stats,
             initialUsers: users
-        };
+        }));
+
     } catch (e: any) {
         console.error("[Admin] Server-Side Data Fetch Error:", e);
-        // Return empty structure to allow Client-Side Auto-Recovery to take over
+        // Return valid empty structure to prevent Client crash
         return {
             stats: { totalUsers: 0, pendingValidation: 0, onlineUsers: 0 },
             initialUsers: []
