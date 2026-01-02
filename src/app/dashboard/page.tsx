@@ -12,13 +12,39 @@ function DashboardContent() {
     const { data: session, update, status } = useSession();
     const searchParams = useSearchParams();
 
-    // Force session update if user data is incomplete (fixes header display issue)
+    // State for Session Barrier
+    const [isSessionReady, setIsSessionReady] = useState(false);
+
+    // Robust Session Barrier Effect
     useEffect(() => {
-        if (status === 'authenticated' && session?.user && !(session.user as any).nom) {
-            console.log("Session incomplete, forcing update...");
-            update();
+        const checkSession = async () => {
+            if (status === 'loading') return;
+
+            if (status === 'unauthenticated') {
+                // Let the router handle redirect if needed, or just show empty
+                setIsSessionReady(true);
+                return;
+            }
+
+            if (status === 'authenticated') {
+                // Check if we have critical user data
+                const user = session?.user as any;
+                if (user && user.nom && user.prenom) {
+                    setIsSessionReady(true);
+                } else {
+                    console.log("Session authenticated but data missing. Retrying...");
+                    await update(); // Force re-fetch from NextAuth
+                    // We don't set isSessionReady to true here; the effect will re-run when session updates
+                }
+            }
+        };
+
+        // If not ready, poll or wait
+        if (!isSessionReady) {
+            const timer = setTimeout(checkSession, 500); // Check every 500ms if stuck
+            return () => clearTimeout(timer);
         }
-    }, [session, update, status]);
+    }, [session, status, update, isSessionReady]);
 
     const router = useRouter();
     const pathname = usePathname();
@@ -132,9 +158,9 @@ function DashboardContent() {
     }, [filters]);
 
     useEffect(() => {
-        if (status === 'loading') return;
+        if (!isSessionReady || status === 'loading') return;
         fetchData();
-    }, [fetchData, status]);
+    }, [fetchData, status, isSessionReady]);
 
     // Scroll to Top when page changes (Robust Mobile Fix)
     useEffect(() => {
@@ -184,6 +210,16 @@ function DashboardContent() {
 
     // Toggle Sidebar
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
+
+    if (status === 'loading' || (status === 'authenticated' && !isSessionReady)) {
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', justifyContent: 'center', alignItems: 'center', gap: '1rem' }}>
+                <Loader2 size={48} className="animate-spin text-primary" style={{ color: '#FCD34D' }} />
+                <div style={{ fontWeight: '600', color: '#4B5563' }}>Chargement de vos données...</div>
+                <div style={{ fontSize: '0.8rem', color: '#9CA3AF' }}>Synchronisation avec le serveur</div>
+            </div>
+        );
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'transparent' }}>
