@@ -290,11 +290,11 @@ export async function getAdminStats() {
 
         return {
             success: true,
-            data: {
+            data: JSON.parse(JSON.stringify({
                 totalUsers: total,
                 pendingValidation: pending,
                 onlineUsers: online
-            }
+            }))
         };
     } catch (e: any) {
         console.error("Stats Error", e);

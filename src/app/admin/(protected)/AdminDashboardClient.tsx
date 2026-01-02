@@ -60,10 +60,12 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
         if (isFirstRun.current) {
             isFirstRun.current = false;
             // AUTO-RECOVERY: If server returned empty data (potential cold start/timing issue),
-            // we force a client-side fetch immediately.
+            // we force a client-side fetch immediately with a small delay for stability.
             if (initialUsers.length === 0) {
-                console.log("Initial data empty - triggering auto-recovery fetch");
-                loadData();
+                console.log("Initial data empty - triggering auto-recovery fetch with delay");
+                setTimeout(() => {
+                    loadData();
+                }, 800); // Wait 800ms for session stabilization
             }
             return;
         }
@@ -76,9 +78,11 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
             const res = await getAdminStats();
             if (res.success && res.data) setStats(res.data);
         };
-        // Auto-refresh stats if they look broken (all zeros)
+        // Auto-refresh stats if they look broken (all zeros) with delay
         if (stats.totalUsers === 0 && stats.pendingValidation === 0) {
-            loadStats();
+            setTimeout(() => {
+                loadStats();
+            }, 800);
         }
         const interval = setInterval(loadStats, 60000);
         return () => clearInterval(interval);
