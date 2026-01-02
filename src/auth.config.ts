@@ -69,6 +69,7 @@ export const authConfig = {
                 token.prenom = (user as any).prenom;
                 token.chambre = (user as any).chambre;
                 token.fonction = (user as any).fonction;
+                token.sessionToken = (user as any).sessionToken;
             }
 
             // Update session trigger
@@ -87,6 +88,7 @@ export const authConfig = {
                 (session.user as any).prenom = token.prenom;
                 (session.user as any).chambre = token.chambre;
                 (session.user as any).fonction = token.fonction;
+                (session.user as any).sessionToken = token.sessionToken;
             }
             return session;
         },

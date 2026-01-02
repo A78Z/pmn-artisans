@@ -68,6 +68,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                             prenom: user.get("prenom") || "",
                             chambre: user.get("chambreName") || "",
                             fonction: user.get("fonction") || "",
+                            sessionToken: user.getSessionToken(), // Important: Pass token for Server Actions
                         };
                     }
                 } catch (error: any) {

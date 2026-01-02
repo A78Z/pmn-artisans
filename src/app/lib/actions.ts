@@ -186,7 +186,7 @@ export async function getFilterOptions(currentFilters: {
             query.limit(1000);
             query.ascending(fieldName);
 
-            const results = await query.find();
+            const results = await query.find({ useMasterKey: true });
             return results.map(r => r.get(fieldName) as string).filter(Boolean);
         } catch (e: any) {
             console.error(`Error fetching ${className} in getFilterOptions:`, e);
