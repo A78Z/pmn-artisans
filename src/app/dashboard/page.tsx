@@ -106,6 +106,23 @@ function DashboardContent() {
         fetchData();
     }, [fetchData]);
 
+    // Scroll to Top when page changes (Robust Mobile Fix)
+    useEffect(() => {
+        // We use a small timeout to let the UI update first
+        const timer = setTimeout(() => {
+            const mainContainer = document.getElementById('main-scroll-container');
+            if (mainContainer) {
+                // Try resetting scrollTop directly
+                mainContainer.scrollTop = 0;
+            }
+            // Fallback for document/window scrolling browsers (Mobile Safari etc)
+            window.scrollTo(0, 0);
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+        }, 50); // 50ms delay
+        return () => clearTimeout(timer);
+    }, [filters.page]);
+
     const updateUrl = (newFilters: any) => {
         const params = new URLSearchParams();
         Object.entries(newFilters).forEach(([k, v]) => {
@@ -125,14 +142,6 @@ function DashboardContent() {
         const newFilters = { ...filters, page: newPage };
         setFilters(newFilters);
         updateUrl(newFilters);
-
-        // Robust Scroll to Top
-        const mainContainer = document.getElementById('main-scroll-container');
-        if (mainContainer) {
-            mainContainer.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        // Fallback for mobile if body scrolls
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleLimitChange = (newLimit: number) => {
