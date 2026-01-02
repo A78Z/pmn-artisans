@@ -197,6 +197,15 @@ function DashboardContent() {
                     .dashboard-header { padding: 0 1rem !important; height: auto !important; min-height: 70px !important; flex-wrap: wrap !important; }
                     .dashboard-main { padding: 1rem 0.5rem !important; }
                     
+                    /* Sync Indicator */
+                    .sync-badge {
+                        display: inline-flex; align-items: center; gap: 0.5rem;
+                        background: #f0f9ff; color: #0284c7;
+                        padding: 0.25rem 0.75rem; borderRadius: 999px;
+                        font-size: 0.75rem; font-weight: 600;
+                        margin-left: 1rem;
+                    }
+                    
                     /* Sidebar Styling */
                     .sidebar-container {
                         position: fixed;
@@ -325,9 +334,15 @@ function DashboardContent() {
                             style={{ height: '50px', width: 'auto', objectFit: 'contain' }}
                         />
                     </div>
+                    {loading && (
+                        <div className="sync-badge">
+                            <Loader2 size={14} className="animate-spin" />
+                            <span>Synchronisation...</span>
+                        </div>
+                    )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                     <div className="hide-on-mobile" style={{ fontSize: '0.9rem', color: 'hsl(var(--muted-foreground))', fontWeight: '500', letterSpacing: '0.02rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         {session?.user && (
                             <span style={{ color: 'hsl(var(--foreground))', fontWeight: '600', textTransform: 'capitalize' }}>
