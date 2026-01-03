@@ -24,36 +24,55 @@ if (typeof window === 'undefined') {
 const globalForParse = global as unknown as { parseInitialized: boolean };
 
 export const ensureParseInitialized = async () => {
-    // If we are already initialized in this process, skip
+    // 1. Check if already initialized in this process
     if (globalForParse.parseInitialized && Parse.applicationId) {
         return;
     }
 
+    // 2. Check if Parse singleton has ID (side-loaded)
     if (Parse.applicationId) {
         globalForParse.parseInitialized = true;
         return;
     }
 
+    // 3. Init
     if (!appId || !jsKey || !serverUrl) {
-        // Only throw if we strictly need it and it's missing
-        throw new Error("Back4App credentials missing - Parse cannot be initialized!");
+        // Silently return (or throw?) - failing here causes 500
+        // Better to throw so we can catch it in the Action
+        console.error("[Parse] Credentials MISSING. Check .env");
+        throw new Error("Back4App credentials missing in environment variables.");
     }
 
-    // @ts-ignore
-    Parse.initialize(appId, jsKey, masterKey);
-    Parse.serverURL = serverUrl;
-    globalForParse.parseInitialized = true;
-    console.log(`[Parse] Initialized. MasterKey provided: ${!!masterKey}`);
+    try {
+        // @ts-ignore
+        Parse.initialize(appId, jsKey, masterKey); // Pass MasterKey as 3rd arg
+        Parse.serverURL = serverUrl;
+
+        // Ensure MasterKey is really usable
+        if (masterKey) {
+            (Parse as any).masterKey = masterKey;
+        }
+
+        globalForParse.parseInitialized = true;
+        console.log(`[Parse] Initialized successfully. MasterKey available: ${!!masterKey}`);
+    } catch (e) {
+        console.error("[Parse] Initialization FAILED:", e);
+        throw e;
+    }
 };
 
-// Auto-init on module load
+// Auto-init on module load (Best effort)
 if (!globalForParse.parseInitialized) {
     if (appId && jsKey && serverUrl) {
-        // @ts-ignore
-        Parse.initialize(appId, jsKey, masterKey);
-        Parse.serverURL = serverUrl;
-        globalForParse.parseInitialized = true;
-        console.log(`[Parse] Auto-Initialized. MasterKey provided: ${!!masterKey}`);
+        try {
+            // @ts-ignore
+            Parse.initialize(appId, jsKey, masterKey);
+            Parse.serverURL = serverUrl;
+            globalForParse.parseInitialized = true;
+            console.log(`[Parse] Auto-Initialized. MasterKey provided: ${!!masterKey}`);
+        } catch (e) {
+            console.warn("[Parse] Auto-init failed, will retry on demand.", e);
+        }
     }
 }
 

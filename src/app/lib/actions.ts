@@ -272,6 +272,9 @@ export async function trackActivity(email: string) {
     }
 }
 
+// INTELLIGENT WRAPPER PATTERN
+// This ensures we NEVER send back an error that Next.js cannot serialize or that crashes the client.
+
 export async function getAdminStats() {
     try {
         await ensureParseInitialized();
@@ -282,25 +285,25 @@ export async function getAdminStats() {
         pendingQuery.equalTo("status", "pending");
         const pending = await pendingQuery.count({ useMasterKey: true });
 
-        // Online = active in last 5 minutes
         const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
         const onlineQuery = new Parse.Query(Parse.User);
         onlineQuery.greaterThan("lastActiveAt", fiveMinutesAgo);
         const online = await onlineQuery.count({ useMasterKey: true });
 
-        return {
+        return JSON.parse(JSON.stringify({
             success: true,
-            data: JSON.parse(JSON.stringify({
+            data: {
                 totalUsers: total,
                 pendingValidation: pending,
                 onlineUsers: online
-            }))
-        };
+            }
+        }));
     } catch (e: any) {
         console.error("Stats Error", e);
+        // Force fail gracefully
         return {
             success: false,
-            error: e.message,
+            error: e.message || "Erreur Stats",
             data: { totalUsers: 0, pendingValidation: 0, onlineUsers: 0 }
         };
     }
@@ -342,10 +345,12 @@ export async function getUsers(statusFilter: 'all' | 'pending' | 'active' | 'onl
             lastActiveAt: u.get("lastActiveAt") ? (u.get("lastActiveAt") as Date).toISOString() : null
         }));
 
-        return { success: true, data: JSON.parse(JSON.stringify(safeUsers)) };
+        // DOUBLE-SAFE:
+        return JSON.parse(JSON.stringify({ success: true, data: safeUsers }));
+
     } catch (e: any) {
         console.error("Get Users Error", e);
-        return { success: false, error: e.message || "Erreur de chargement des utilisateurs", data: [] };
+        return { success: false, error: e.message || "Erreur de chargement", data: [] };
     }
 }
 
@@ -354,9 +359,7 @@ export async function updateUserStatus(userId: string, newStatus: 'active' | 're
         await ensureParseInitialized();
         const query = new Parse.Query(Parse.User);
         const user = await query.get(userId, { useMasterKey: true });
-
         user.set("status", newStatus);
-
         await user.save(null, { useMasterKey: true });
         return { success: true };
     } catch (e: any) {
@@ -369,9 +372,7 @@ export async function resetUserPassword(userId: string, newPassword: string) {
         await ensureParseInitialized();
         const query = new Parse.Query(Parse.User);
         const user = await query.get(userId, { useMasterKey: true });
-
         user.setPassword(newPassword);
-
         await user.save(null, { useMasterKey: true });
         return { success: true };
     } catch (e: any) {
@@ -382,12 +383,7 @@ export async function resetUserPassword(userId: string, newPassword: string) {
 export async function createAdminUser(data: { email: string; password?: string; role: 'admin' | 'super_admin'; nom?: string; prenom?: string }) {
     try {
         await ensureParseInitialized();
-        // Enforce Super Admin Check (Simple implementation for now)
-        // In real app, check current session role.
-
         const user = new Parse.User();
-        // Check if user exists first? user.signUp handles it.
-
         user.set("username", data.email);
         user.set("email", data.email);
         user.set("password", data.password || Math.random().toString(36).slice(-8));
@@ -395,13 +391,7 @@ export async function createAdminUser(data: { email: string; password?: string; 
         user.set("nom", data.nom || "");
         user.set("prenom", data.prenom || "");
         user.set("status", "active");
-
-        // Ensure no other fields block sign up
-
         await user.signUp(null, { useMasterKey: true });
-
-        // We could send email here
-
         return { success: true };
     } catch (e: any) {
         console.error("Create Admin Error", e);
@@ -430,7 +420,7 @@ export async function getAdmins() {
             createdAt: u.createdAt?.toISOString() || new Date().toISOString()
         }));
 
-        return { success: true, data: JSON.parse(JSON.stringify(safeAdmins)) };
+        return JSON.parse(JSON.stringify({ success: true, data: safeAdmins }));
     } catch (e: any) {
         console.error("Get Admins Error", e);
         return { success: false, error: e.message, data: [] };
@@ -438,7 +428,6 @@ export async function getAdmins() {
 }
 
 export async function sendPasswordResetEmail(email: string, newPass: string) {
-    // In a real app, use Resend, SendGrid, or nodemailer here.
     console.log(`[EMAIL SIMULATION] To: ${email}, Subject: Réinitialisation de mot de passe, Body: Votre nouveau mot de passe est : ${newPass}`);
     return { success: true };
 }
