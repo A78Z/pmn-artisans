@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { getAdminStats, getUsers, updateUserStatus, resetUserPassword, getAdmins, createAdminUser, sendPasswordResetEmail, bootstrapAdmin } from '@/app/lib/actions';
-import { Loader2, UserCheck, UserX, User, Activity, RefreshCw, Search, Phone, Mail, Key, Shield, Plus, X, Copy, Check, LogOut } from 'lucide-react';
+import { Loader2, UserCheck, UserX, User, Activity, RefreshCw, Search, Phone, Mail, Key, Shield, Plus, X, Copy, Check, LogOut, AlertTriangle, PlayCircle } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 
 interface AdminDashboardClientProps {
@@ -30,6 +30,7 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
 
     // BOOTSTRAP STATE
     const [isBootstrapped, setIsBootstrapped] = useState(false);
+    const [bootstrapError, setBootstrapError] = useState<string | null>(null);
 
     // Password Reset State
     const [resetUser, setResetUser] = useState<any | null>(null);
@@ -64,16 +65,41 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
     const isFirstRun = useRef(true);
 
     // 1. BOOTSTRAP EFFECT (The "Barrier")
-    useEffect(() => {
-        const runBootstrap = async () => {
+    // 1. BOOTSTRAP EFFECT (The "Barrier")
+    const runBootstrap = async () => {
+        try {
             console.log("[Admin] Bootstrapping Session...");
-            const res = await bootstrapAdmin();
-            if (!res.success) {
+            setBootstrapError(null);
+
+            // Race with 8s timeout (Safety Timeout)
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Délai d'attente dépassé (Timeout)")), 8000)
+            );
+
+            const res: any = await Promise.race([
+                bootstrapAdmin(),
+                timeoutPromise
+            ]);
+
+            if (res && !res.success) {
                 console.error("[Admin] Bootstrap warning:", res.error);
+                // If it's a specific "server unreachable" error, we might want to block.
+                // But generally, we try to proceed unless it's critical.
+                // For now, if bootstrap fails, we should be careful.
+                // Let's assume if it fails, it's safer to show error than infinite load OR proceed with caution.
+                // User requirement: "Soit se terminer auto, soit échouer proprement".
+                throw new Error(res.error || "Erreur de synchronisation");
             }
-            // Proceed regardless, but at least we waited for the RTT
+
+            // Success -> Proceed
             setIsBootstrapped(true);
-        };
+        } catch (e: any) {
+            console.error("[Admin] Bootstrap Failed:", e);
+            setBootstrapError(e.message || "La synchronisation a échoué. Vérifiez votre connexion.");
+        }
+    };
+
+    useEffect(() => {
         runBootstrap();
     }, []);
 
@@ -114,10 +140,61 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
 
     // BLOCKING RENDER for Bootstrap
     if (!isBootstrapped) {
+        if (bootstrapError) {
+            return (
+                <div style={{
+                    height: '80vh', display: 'flex', flexDirection: 'column',
+                    justifyContent: 'center', alignItems: 'center', gap: '1.5rem',
+                    textAlign: 'center', padding: '1rem'
+                }}>
+                    <div style={{
+                        width: '64px', height: '64px', borderRadius: '50%',
+                        backgroundColor: '#fee2e2', color: '#ef4444',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        marginBottom: '0.5rem'
+                    }}>
+                        <AlertTriangle size={32} />
+                    </div>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'hsl(var(--foreground))' }}>
+                        Synchronisation impossible
+                    </h2>
+                    <p style={{ color: 'hsl(var(--muted-foreground))', maxWidth: '400px' }}>
+                        Impossible de joindre le serveur de données.<br />
+                        <span style={{ fontSize: '0.85rem' }}>Détail: {bootstrapError}</span>
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                        <button
+                            onClick={() => signOut({ callbackUrl: '/admin/login' })}
+                            style={{
+                                padding: '0.75rem 1.5rem', borderRadius: '0.5rem',
+                                border: '1px solid hsl(var(--border))', backgroundColor: 'white',
+                                color: 'hsl(var(--muted-foreground))', fontWeight: '600', cursor: 'pointer'
+                            }}
+                        >
+                            Déconnexion
+                        </button>
+                        <button
+                            onClick={() => runBootstrap()}
+                            style={{
+                                padding: '0.75rem 1.5rem', borderRadius: '0.5rem',
+                                border: 'none', backgroundColor: 'hsl(var(--primary))',
+                                color: 'white', fontWeight: '600', cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '0.5rem'
+                            }}
+                        >
+                            <RefreshCw size={18} /> Réessayer
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="flex h-[80vh] w-full items-center justify-center flex-col gap-4" style={{ height: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: '1rem' }}>
                 <Loader2 className="animate-spin text-terracotta-500" size={48} style={{ color: 'hsl(var(--primary))' }} />
                 <p style={{ color: 'hsl(var(--muted-foreground))', animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>Synchronisation avec le serveur...</p>
+                {/* Fallback link if it takes too long but not errored yet? No, timeout handles it. */}
             </div>
         );
     }
