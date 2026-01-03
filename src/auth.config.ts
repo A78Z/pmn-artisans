@@ -10,7 +10,7 @@ export const authConfig = {
             const role = auth?.user?.role as string | undefined;
 
             const isOnAdmin = nextUrl.pathname.startsWith('/admin');
-            const isOnDashboard = nextUrl.pathname.startsWith('/dashboard');
+            const isOnDashboard = nextUrl.pathname.startsWith('/dashboard') || nextUrl.pathname === '/'; // Include root if needed
             const isLoginPage = nextUrl.pathname === '/login';
             const isAdminLoginPage = nextUrl.pathname === '/admin/login';
 
@@ -26,31 +26,26 @@ export const authConfig = {
             }
 
             // 2. Logged In - Strict Role Check
-            const isAdminUser = role === 'admin' || role === 'super_admin';
+            // Normalize role just in case
+            const isAdminUser = role === 'admin' || role === 'super_admin' || role === 'Admin' || role === 'SuperAdmin';
 
             if (isAdminUser) {
-                // Admin on Login Pages -> Redirect to Admin Area
-                if (isLoginPage || isAdminLoginPage) {
+                // Admin Restriction: Cannot be on User Login or User Dashboard
+                if (isLoginPage || isOnDashboard || isAdminLoginPage) {
                     return Response.redirect(new URL('/admin', nextUrl));
                 }
-                // Admin is allowed on Dashboard? 
-                // User asked for "Separation clear".
-                // If strictness is required, we could redirect /dashboard to /admin.
-                // For now, we allow access but prevent accidental redirection TO dashboard from login.
                 return true;
             }
 
-            // User Logic (Non-Admin)
+            // 3. User Logic (Non-Admin)
             if (!isAdminUser) {
-                // User on Admin Pages -> Redirect to Dashboard
-                // EXCEPTION: Allow access to Admin Login to enable "Account Switching"
+                // User Restriction: Cannot be on Admin Pages
                 if (isOnAdmin) {
-                    if (isAdminLoginPage) {
-                        return true;
-                    }
+                    // Exception: Maybe they want to login as admin? Allow Admin Login Page.
+                    if (isAdminLoginPage) return true;
                     return Response.redirect(new URL('/dashboard', nextUrl));
                 }
-                // User on Login Page -> Redirect to Dashboard
+                // User Restriction: Cannot be on User Login Page (already logged in)
                 if (isLoginPage) {
                     return Response.redirect(new URL('/dashboard', nextUrl));
                 }
