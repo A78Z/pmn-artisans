@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getAdminStats, getUsers, updateUserStatus, resetUserPassword, getAdmins, createAdminUser, sendPasswordResetEmail } from '@/app/lib/actions';
+import { getAdminStats, getUsers, updateUserStatus, resetUserPassword, getAdmins, createAdminUser, sendPasswordResetEmail, bootstrapAdmin } from '@/app/lib/actions';
 import { Loader2, UserCheck, UserX, User, Activity, RefreshCw, Search, Phone, Mail, Key, Shield, Plus, X, Copy, Check, LogOut } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 
@@ -24,6 +24,9 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
     const [showAddAdminModal, setShowAddAdminModal] = useState(false);
+
+    // BOOTSTRAP STATE
+    const [isBootstrapped, setIsBootstrapped] = useState(false);
 
     // Password Reset State
     const [resetUser, setResetUser] = useState<any | null>(null);
@@ -57,7 +60,22 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
     const retryCountRef = useRef(0);
     const isFirstRun = useRef(true);
 
+    // 1. BOOTSTRAP EFFECT (The "Barrier")
     useEffect(() => {
+        const runBootstrap = async () => {
+            console.log("[Admin] Bootstrapping Session...");
+            const res = await bootstrapAdmin();
+            if (!res.success) {
+                console.error("[Admin] Bootstrap warning:", res.error);
+            }
+            // Proceed regardless, but at least we waited for the RTT
+            setIsBootstrapped(true);
+        };
+        runBootstrap();
+    }, []);
+
+    useEffect(() => {
+        if (!isBootstrapped) return;
         if (isFirstRun.current) {
             isFirstRun.current = false;
             // AUTO-RECOVERY: If server returned empty data (potential cold start/timing issue),
@@ -71,10 +89,12 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
             return;
         }
         loadData();
-    }, [activeTab]);
+    }, [activeTab, isBootstrapped]);
 
     // Interval for Stats (keep this for liveliness)
     useEffect(() => {
+        if (!isBootstrapped) return;
+
         const loadStats = async () => {
             const res = await getAdminStats();
             if (res.success && res.data) setStats(res.data);
@@ -87,7 +107,17 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
         }
         const interval = setInterval(loadStats, 60000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isBootstrapped]);
+
+    // BLOCKING RENDER for Bootstrap
+    if (!isBootstrapped) {
+        return (
+            <div className="flex h-[80vh] w-full items-center justify-center flex-col gap-4" style={{ height: '80vh', display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', gap: '1rem' }}>
+                <Loader2 className="animate-spin text-terracotta-500" size={48} style={{ color: 'hsl(var(--primary))' }} />
+                <p style={{ color: 'hsl(var(--muted-foreground))', animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>Synchronisation avec le serveur...</p>
+            </div>
+        );
+    }
 
     const loadData = async () => {
         try {

@@ -431,3 +431,19 @@ export async function sendPasswordResetEmail(email: string, newPass: string) {
     console.log(`[EMAIL SIMULATION] To: ${email}, Subject: Réinitialisation de mot de passe, Body: Votre nouveau mot de passe est : ${newPass}`);
     return { success: true };
 }
+
+// FORCE PARSE SYNC (Session Bootstrap)
+export async function bootstrapAdmin() {
+    try {
+        await ensureParseInitialized();
+        // Force a simple MasterKey read to "warm up" the connection/session
+        const query = new Parse.Query(Parse.User);
+        query.limit(1);
+        await query.find({ useMasterKey: true });
+
+        return { success: true };
+    } catch (e: any) {
+        console.error("Bootstrap Error", e);
+        return { success: false, error: e.message };
+    }
+}
