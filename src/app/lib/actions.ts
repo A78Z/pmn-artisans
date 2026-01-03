@@ -408,6 +408,14 @@ export async function createAdminUser(data: { email: string; password?: string; 
             // Ensure status is active
             existingUser.set("status", "active");
 
+            // PASSWORD UPDATE (If manually provided)
+            let msgDetails = "Rôle mis à jour";
+            if (data.password && data.password.trim().length > 0) {
+                console.log(`[Admin] Updating password for existing user ${normalizedEmail}`);
+                existingUser.setPassword(data.password.trim());
+                msgDetails += " + Mot de passe modifié";
+            }
+
             // Ensure username/email consistency (repair if needed)
             if (existingUser.get("username") !== normalizedEmail) {
                 existingUser.set("username", normalizedEmail);
@@ -417,20 +425,33 @@ export async function createAdminUser(data: { email: string; password?: string; 
             }
 
             await existingUser.save(null, { useMasterKey: true });
-            return { success: true, message: "Utilisateur existant mis à jour : Rôle " + data.role };
+            return { success: true, message: `Utilisateur existant mis à jour (${msgDetails}).` };
         }
 
         // 2. Create New User
         const user = new Parse.User();
         user.set("username", normalizedEmail);
         user.set("email", normalizedEmail);
-        user.set("password", data.password || Math.random().toString(36).slice(-8));
+
+        // Define Password: specific or random
+        const finalPassword = (data.password && data.password.trim().length > 0)
+            ? data.password.trim()
+            : Math.random().toString(36).slice(-8);
+
+        user.set("password", finalPassword);
         user.set("role", data.role);
         user.set("nom", data.nom || "");
         user.set("prenom", data.prenom || "");
         user.set("status", "active");
 
         await user.signUp(null, { useMasterKey: true });
+
+        // Simulate Email if random password was used
+        if (!data.password) {
+            console.log(`[Admin] Auto-generated password for ${normalizedEmail}: ${finalPassword}`);
+            // In real app: await sendWelcomeEmail(normalizedEmail, finalPassword);
+        }
+
         return { success: true, message: "Nouvel administrateur créé." };
 
     } catch (e: any) {
