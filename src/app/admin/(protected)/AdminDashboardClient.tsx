@@ -25,6 +25,9 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
     const [search, setSearch] = useState('');
     const [showAddAdminModal, setShowAddAdminModal] = useState(false);
 
+    // MODAL ERROR STATE
+    const [addAdminError, setAddAdminError] = useState<string | null>(null);
+
     // BOOTSTRAP STATE
     const [isBootstrapped, setIsBootstrapped] = useState(false);
 
@@ -213,6 +216,8 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
 
     const handleCreateAdmin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        setAddAdminError(null); // Clear previous errors
+
         const formData = new FormData(e.currentTarget);
         const email = formData.get('email') as string;
         const nom = formData.get('nom') as string;
@@ -220,17 +225,19 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
         const password = formData.get('password') as string;
 
         if (!email || !role) {
-            alert("Veuillez remplir les champs obligatoires.");
+            setAddAdminError("Veuillez remplir les champs obligatoires.");
             return;
         }
 
         const res = await createAdminUser({ email, nom, role, password });
         if (res.success) {
-            // alert(`L'administrateur ${email} a été créé avec succès.`);
+            // Success - Close Modal and Reload
+            // Ideally show a transient success message, but priority is stability.
             setShowAddAdminModal(false);
+            setAddAdminError(null);
             loadData();
         } else {
-            alert("Erreur: " + res.error);
+            setAddAdminError(res.error || "Une erreur est survenue.");
         }
     };
 
@@ -443,6 +450,11 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
                             <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Ajouter un administrateur</h2>
                             <button onClick={() => setShowAddAdminModal(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X /></button>
                         </div>
+                        {addAdminError && (
+                            <div style={{ padding: '0.75rem', borderRadius: '0.5rem', backgroundColor: '#fee2e2', color: '#dc2626', marginBottom: '1rem', fontSize: '0.9rem' }}>
+                                {addAdminError}
+                            </div>
+                        )}
                         <form onSubmit={handleCreateAdmin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: '500' }}>Email</label>

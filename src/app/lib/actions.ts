@@ -385,31 +385,45 @@ export async function createAdminUser(data: { email: string; password?: string; 
     try {
         await ensureParseInitialized();
 
-        // 1. Check if user exists (Idempotency Check)
-        const query = new Parse.Query(Parse.User);
-        query.equalTo("email", data.email); // Assume email is unique identifier
-        const existingUser = await query.first({ useMasterKey: true });
+        const normalizedEmail = data.email.toLowerCase().trim();
+
+        // 1. Check if user exists (Idempotency Check) - Query by Username OR Email to be safe
+        const queryByEmail = new Parse.Query(Parse.User);
+        queryByEmail.equalTo("email", normalizedEmail);
+
+        const queryByUsername = new Parse.Query(Parse.User);
+        queryByUsername.equalTo("username", normalizedEmail);
+
+        const mainQuery = Parse.Query.or(queryByEmail, queryByUsername);
+        const existingUser = await mainQuery.first({ useMasterKey: true });
 
         if (existingUser) {
-            console.log(`[Admin] User ${data.email} exists. Updating role to ${data.role}.`);
+            console.log(`[Admin] User ${normalizedEmail} exists. Updating role to ${data.role}.`);
             existingUser.set("role", data.role);
 
-            // Optionally update name if provided and missing?
-            // For now, let's trust the input or preserve existing.
+            // Trust input for name if provided, otherwise keep existing
             if (data.nom) existingUser.set("nom", data.nom);
             if (data.prenom) existingUser.set("prenom", data.prenom);
 
-            // Ensure status is active if we are making them admin
+            // Ensure status is active
             existingUser.set("status", "active");
 
+            // Ensure username/email consistency (repair if needed)
+            if (existingUser.get("username") !== normalizedEmail) {
+                existingUser.set("username", normalizedEmail);
+            }
+            if (existingUser.get("email") !== normalizedEmail) {
+                existingUser.set("email", normalizedEmail);
+            }
+
             await existingUser.save(null, { useMasterKey: true });
-            return { success: true, message: "Utilisateur existant mis à jour en Admin." };
+            return { success: true, message: "Utilisateur existant mis à jour : Rôle " + data.role };
         }
 
         // 2. Create New User
         const user = new Parse.User();
-        user.set("username", data.email);
-        user.set("email", data.email);
+        user.set("username", normalizedEmail);
+        user.set("email", normalizedEmail);
         user.set("password", data.password || Math.random().toString(36).slice(-8));
         user.set("role", data.role);
         user.set("nom", data.nom || "");
@@ -421,11 +435,13 @@ export async function createAdminUser(data: { email: string; password?: string; 
 
     } catch (e: any) {
         console.error("Create Admin Error", e);
-        // Handle race conditions or specific Parse errors
-        if (e.code === 202) { // Account already exists (race condition fallback)
-            return { error: "Un compte existe déjà pour cet email (Erreur sync)." };
+        // Handle "Account already exists" just in case race condition checks failed
+        if (e.code === 202 || e.message.includes("Account already exists")) {
+            // Fallback: This triggers if query missed it but signUp failed.
+            // We should try to fetch-and-update here, but for now just return clear error.
+            return { error: "Un compte utilise déjà cet email. Réesayez pour mettre à jour." };
         }
-        return { error: e.message };
+        return { error: e.message || "Erreur lors de la création." };
     }
 }
 
