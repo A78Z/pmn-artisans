@@ -16,16 +16,10 @@ export default async function AdminPage() {
     // If the role isn't explicitly 'admin' or 'super_admin', we might still let them in 
     // if the system allows 'user' to see a basic dashboard, but typically admin is protected.
     // Given the prompt, let's assume strict admin access.
+    // 2. Role Check
     const role = (session.user as any).role;
-    if (role !== 'admin' && role !== 'super_admin') {
-        // Optionally redirect to user dashboard or show 403.
-        // For safety, let's redirect to login if they aren't admin.
-        // Or maybe just let them pass and the component hides things? 
-        // Most secure is to redirect.
-        // However, existing logic seemed lax ("relaxed check"). Let's replicate "if not admin -> login" strictly.
-        if (session.user.email !== 'contact.mobiliernational@gmail.com' && session.user.email !== 'syllaharouna740@gmail.com') {
-            // redirect("/admin/login"); // Commented out to avoid locking out during dev if roles are messy
-        }
+    if (role !== 'admin' && role !== 'super_admin' && session.user.email !== 'syllaharouna740@gmail.com') {
+        redirect("/dashboard");
     }
 
     // 3. Fetch Data (Server Side)

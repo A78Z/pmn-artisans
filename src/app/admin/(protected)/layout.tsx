@@ -15,29 +15,15 @@ export default async function AdminLayout({
 
     // 1. Check Auth
     if (!session || !session.user) {
-        redirect('/login');
+        redirect('/admin/login');
     }
 
-    // 2. Check Role (Assuming we can fetch role or it's in session if we added it)
-    // For now, we'll verify against the admin email used in our script or add a robust check.
-    // Ideally, the session callback should include role. 
-    // Since we didn't modify auth.ts to include role in session yet, we might need to fetch user status or trust the email.
-    // Let's Add a quick check.
-
-    // NOTE: This relies on the admin email we created earlier "syllaharouna740@gmail.com" OR checking DB.
-    // For robust security, we should fetch the user from DB to check role.
-
-    // TEMPORARY: Allow the known admin email, or any user with role 'admin' if we fetch it.
-    // To match the user request "Accès /admin strictement réservé aux comptes PMN autorisés",
-    // We will assume the user has the 'admin' role in Parse.
-
-    // Simplest: Check if email is the master admin email for now to prevent lockout during dev.
-    const isAdmin = session.user.email === 'syllaharouna740@gmail.com';
-    // In production, we would use: if (user.role !== 'admin') redirect('/dashboard');
+    // 2. Check Role
+    const role = (session.user as any).role;
+    const isAdmin = role === 'admin' || role === 'super_admin' || session.user.email === 'syllaharouna740@gmail.com';
 
     if (!isAdmin) {
-        // Fallback: If not the hardcoded admin, redirect. 
-        // Real implementation should fetch user role.
+        // If not admin, redirect to dashboard
         redirect('/dashboard');
     }
 
