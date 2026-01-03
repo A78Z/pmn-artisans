@@ -380,9 +380,33 @@ export async function resetUserPassword(userId: string, newPassword: string) {
     }
 }
 
+// IDEMPOTENT ADMIN CREATION
 export async function createAdminUser(data: { email: string; password?: string; role: 'admin' | 'super_admin'; nom?: string; prenom?: string }) {
     try {
         await ensureParseInitialized();
+
+        // 1. Check if user exists (Idempotency Check)
+        const query = new Parse.Query(Parse.User);
+        query.equalTo("email", data.email); // Assume email is unique identifier
+        const existingUser = await query.first({ useMasterKey: true });
+
+        if (existingUser) {
+            console.log(`[Admin] User ${data.email} exists. Updating role to ${data.role}.`);
+            existingUser.set("role", data.role);
+
+            // Optionally update name if provided and missing?
+            // For now, let's trust the input or preserve existing.
+            if (data.nom) existingUser.set("nom", data.nom);
+            if (data.prenom) existingUser.set("prenom", data.prenom);
+
+            // Ensure status is active if we are making them admin
+            existingUser.set("status", "active");
+
+            await existingUser.save(null, { useMasterKey: true });
+            return { success: true, message: "Utilisateur existant mis à jour en Admin." };
+        }
+
+        // 2. Create New User
         const user = new Parse.User();
         user.set("username", data.email);
         user.set("email", data.email);
@@ -391,10 +415,16 @@ export async function createAdminUser(data: { email: string; password?: string; 
         user.set("nom", data.nom || "");
         user.set("prenom", data.prenom || "");
         user.set("status", "active");
+
         await user.signUp(null, { useMasterKey: true });
-        return { success: true };
+        return { success: true, message: "Nouvel administrateur créé." };
+
     } catch (e: any) {
         console.error("Create Admin Error", e);
+        // Handle race conditions or specific Parse errors
+        if (e.code === 202) { // Account already exists (race condition fallback)
+            return { error: "Un compte existe déjà pour cet email (Erreur sync)." };
+        }
         return { error: e.message };
     }
 }
