@@ -24,14 +24,19 @@ if (typeof window === 'undefined') {
 const globalForParse = global as unknown as { parseInitialized: boolean };
 
 export const ensureParseInitialized = async () => {
-    // 1. Check if already initialized in this process
+    // 1. Check if already initialized, BUT re-assert configuration to be safe
     if (globalForParse.parseInitialized && Parse.applicationId) {
+        // Re-apply critical settings in case they were lost or init was weak (e.g. via Auth without MasterKey)
+        if (serverUrl) Parse.serverURL = serverUrl;
+        if (masterKey) (Parse as any).masterKey = masterKey;
         return;
     }
 
-    // 2. Check if Parse singleton has ID (side-loaded)
+    // 2. Check if Parse singleton has ID (side-loaded) - Re-assert here too
     if (Parse.applicationId) {
         globalForParse.parseInitialized = true;
+        if (serverUrl) Parse.serverURL = serverUrl;
+        if (masterKey) (Parse as any).masterKey = masterKey;
         return;
     }
 

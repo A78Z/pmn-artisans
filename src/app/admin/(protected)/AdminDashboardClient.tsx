@@ -54,6 +54,7 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
 
     // We need a ref to track if we should fetch. 
     // If activeTab is 'validation' and we just mounted, don't fetch.
+    const retryCountRef = useRef(0);
     const isFirstRun = useRef(true);
 
     useEffect(() => {
@@ -89,9 +90,17 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
     }, []);
 
     const loadData = async () => {
-        setLoading(true);
-        setError(null);
         try {
+            setLoading(true);
+            setError(null);
+
+            // 1. Always fetch stats (counters)
+            const statsRes = await getAdminStats();
+            if (statsRes.success && statsRes.data) {
+                setStats(statsRes.data);
+            }
+
+            // 2. Determine Fetch Strategy
             let res;
             if (activeTab === 'admins') {
                 res = await fetchWithRetry(() => getAdmins());
@@ -99,17 +108,41 @@ export default function AdminDashboardClient({ initialStats, initialUsers, sessi
                 let filter: 'pending' | 'all' | 'online' = 'all';
                 if (activeTab === 'validation') filter = 'pending';
                 if (activeTab === 'online') filter = 'online';
-                res = await fetchWithRetry(() => getUsers(filter));
+
+                res = await getUsers(filter);
             }
 
+            // 3. Handle Response
             if (res.success && res.data) {
                 setData(res.data);
+                retryCountRef.current = 0; // Success -> Reset retry
             } else {
-                setError(res.error || "Erreur de chargement");
+                const err = res.error || "Erreur de chargement";
+
+                // RETRY LOGIC for "Unexpected response"
+                if ((typeof err === 'string' && err.includes("unexpected response")) || !res.success) {
+                    if (retryCountRef.current < 2) {
+                        console.log(`Auto-Retrying data load (${retryCountRef.current + 1}/2)...`);
+                        retryCountRef.current += 1;
+                        setTimeout(() => loadData(), 1200);
+                        return;
+                    }
+                }
+                setError(err);
             }
         } catch (e: any) {
-            console.error(e);
-            setError(e.message || "Impossible de charger les données.");
+            console.error("Load Data Exception:", e);
+            const msg = e.message || "Impossible de charger les données.";
+
+            // RETRY LOGIC for Exceptions
+            if (msg.includes("unexpected response") && retryCountRef.current < 2) {
+                console.log(`Auto-Retrying exception (${retryCountRef.current + 1}/2)...`);
+                retryCountRef.current += 1;
+                setTimeout(() => loadData(), 1200);
+                return;
+            }
+
+            setError(msg);
         } finally {
             setLoading(false);
         }
